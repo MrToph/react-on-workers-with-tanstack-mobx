@@ -5,19 +5,13 @@ import { DataTable } from "@/components/data-table";
 import { SectionCards } from "@/components/section-cards";
 import { SiteHeader } from "@/components/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
-import { useQuery } from "@tanstack/react-query";
-import { trpc } from "@/query";
-
-export const Route = createFileRoute("/")({
-  component: RouteComponent,
-});
+import { observer } from "mobx-react-lite"
+import { useStore } from "@/store/use-store";
 
 function RouteComponent() {
-  const { data, isError, isLoading } = useQuery(
-    trpc.exampleTableData.getTableData.queryOptions({
-      tableId: "exampleTableId",
-    }),
-  );
+  const store = useStore(store => store.dashboardStore);
+  // const { data, isError, isLoading } = store.data;
+  const { data, isError, isLoading } = store.dataDynamic;
 
   return (
     <SidebarProvider>
@@ -28,10 +22,11 @@ function RouteComponent() {
           <div className="@container/main flex flex-1 flex-col gap-2">
             <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
               <SectionCards />
+              <button onClick={store.incrementTableId}>Table ID: {store.tableId}</button>
               <div className="px-4 lg:px-6">
                 <ChartAreaInteractive />
               </div>
-              {isLoading ? (
+              {/* {isLoading ? (
                 <div className="flex items-center justify-center p-4">
                   <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
                   <span className="ml-2">Loading data...</span>
@@ -50,7 +45,8 @@ function RouteComponent() {
                 </div>
               ) : (
                 data?.dummyData && <DataTable data={data.dummyData} />
-              )}
+              )} */}
+              {/* {data?.dummyData && <DataTable data={data.dummyData} />} */}
             </div>
           </div>
         </div>
@@ -58,3 +54,10 @@ function RouteComponent() {
     </SidebarProvider>
   );
 }
+
+
+const ObserverRouteComponent = observer(RouteComponent);
+
+export const Route = createFileRoute("/")({
+  component: ObserverRouteComponent,
+});

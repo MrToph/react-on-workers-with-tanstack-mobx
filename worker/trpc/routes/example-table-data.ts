@@ -11,9 +11,9 @@ export const exampleTableDataRouter = t.router({
       // await new Promise((resolve) => setTimeout(resolve, 2000));
 
       // 50% chance to throw an error
-      if (Math.random() < 0.5) {
-        throw new Error("Random error occurred while fetching table data");
-      }
+      // if (Math.random() < 0.5) {
+      //   throw new Error("Random error occurred while fetching table data");
+      // }
 
       return { dummyData };
     }),
