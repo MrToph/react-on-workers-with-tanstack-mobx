@@ -1,25 +1,9 @@
 import { createRouter as createTanStackRouter } from "@tanstack/react-router";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { createTRPCClient, httpBatchLink } from "@trpc/client";
-import { createTRPCOptionsProxy } from "@trpc/tanstack-react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { queryClient, trpc } from "@/query";
 
 // Import the generated route tree
 import { routeTree } from "./routeTree.gen";
-
-import type { AppRouter } from "@worker/trpc/router";
-
-export const queryClient = new QueryClient();
-
-export const trpc = createTRPCOptionsProxy<AppRouter>({
-  client: createTRPCClient({
-    links: [
-      httpBatchLink({
-        url: "/trpc",
-      }),
-    ],
-  }),
-  queryClient,
-});
 
 export function createRouter() {
   const router = createTanStackRouter({
@@ -30,7 +14,11 @@ export function createRouter() {
       trpc,
       queryClient,
     },
-
+    defaultPendingComponent: () => (
+      <div className={`p-2 text-2xl`}>
+        <p>SPINNER TODO</p>
+      </div>
+    ),
     Wrap: function WrapComponent({ children }) {
       return (
         <QueryClientProvider client={queryClient}>

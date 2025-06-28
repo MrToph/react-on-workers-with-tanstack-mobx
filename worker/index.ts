@@ -4,7 +4,7 @@ import { appRouter } from "@worker/trpc/router";
 import { createContext } from "@worker/trpc/context";
 
 export default {
-  fetch(request, env, ctx) {
+  fetch(request: Request, env: Env, ctx: ExecutionContext) {
     const url = new URL(request.url);
 
     if (url.pathname.startsWith("/trpc")) {

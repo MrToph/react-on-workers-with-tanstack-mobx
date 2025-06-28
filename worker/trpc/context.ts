@@ -1,3 +1,5 @@
+/// <reference types="../../worker-configuration.d.ts" />
+
 export async function createContext({
   req,
   env,

@@ -8,5 +8,5 @@
       "@worker/*": ["./worker/*"]
     }
   },
-  "include": ["worker"]
+  "include": ["./worker-configuration.d.ts", "./worker"]
 }

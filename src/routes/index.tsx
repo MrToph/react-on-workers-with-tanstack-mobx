@@ -6,7 +6,7 @@ import { SectionCards } from "@/components/section-cards";
 import { SiteHeader } from "@/components/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { useQuery } from "@tanstack/react-query";
-import { trpc } from "@/router";
+import { trpc } from "@/query";
 
 export const Route = createFileRoute("/")({
   component: RouteComponent,
