@@ -9,9 +9,11 @@ import { observer } from "mobx-react-lite"
 import { useStore } from "@/store/use-store";
 
 function RouteComponent() {
+  console.log("RouteComponent RENDER");
   const store = useStore(store => store.dashboardStore);
   // const { data, isError, isLoading } = store.data;
   const { data, isError, isLoading } = store.dataDynamic;
+
 
   return (
     <SidebarProvider>
@@ -46,7 +48,7 @@ function RouteComponent() {
               ) : (
                 data?.dummyData && <DataTable data={data.dummyData} />
               )} */}
-              {/* {data?.dummyData && <DataTable data={data.dummyData} />} */}
+              {data?.dummyData && <DataTable data={data.dummyData} />}
             </div>
           </div>
         </div>

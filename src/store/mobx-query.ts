@@ -54,7 +54,7 @@ export class MobxQuery<
       TQueryData,
       TQueryKey
     >,
-  ): QueryObserverResult<TData, TError> {
+  ) {
     // pass same options to QueryObserver as for QueryClient
     const opts = Object.assign({}, this.#defaultOptions, options);
 
@@ -79,6 +79,9 @@ export class MobxQuery<
         return runInAction(() => Object.assign(this.#reactQueryResult, result))
       });
     }
+  }
+
+  get result(): QueryObserverResult<TData, TError> {
     return this.#reactQueryResult;
   }
 
