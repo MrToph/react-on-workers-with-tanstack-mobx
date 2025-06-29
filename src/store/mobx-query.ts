@@ -1,6 +1,5 @@
 import { queryClient } from "@/query";
 import {
-  DefaultedQueryObserverOptions,
   QueryClient,
   QueryKey,
   QueryObserver,

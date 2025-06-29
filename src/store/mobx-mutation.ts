@@ -52,7 +52,7 @@ export class MobxMutation<
 
     this.#observer = new MutationObserver(
       this.#queryClient,
-      // no need to merge options as .mutate takes different options, the input variables
+      // no need to merge options as .mutate does it automatically?
       this.#defaultOptions
     );
     this.#unsubscribe = this.#observer.subscribe((result) =>
