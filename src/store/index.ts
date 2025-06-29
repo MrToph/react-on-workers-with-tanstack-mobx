@@ -21,6 +21,10 @@ export class RootStore {
       throw new Error(`Error while initializing store: ${error.message}`);
     }
   }
+
+  public get queryClient() {
+    return this.#queryClient;
+  }
 }
 
 export const rootStore = new RootStore();

@@ -1,4 +1,4 @@
-import { queryClient } from '@/query';
+import { queryClient } from "@/query";
 import {
   DefaultedQueryObserverOptions,
   QueryClient,
@@ -6,15 +6,15 @@ import {
   QueryObserver,
   QueryObserverOptions,
   QueryObserverResult,
-} from '@tanstack/react-query';
-import { observable, runInAction } from 'mobx';
+} from "@tanstack/react-query";
+import { observable, runInAction } from "mobx";
 
 export class MobxQuery<
   TQueryFnData = unknown,
   TError = unknown,
   TData = TQueryFnData,
   TQueryData = TQueryFnData,
-  TQueryKey extends QueryKey = QueryKey,
+  TQueryKey extends QueryKey = QueryKey
 > {
   readonly #queryClient: QueryClient;
   readonly #defaultOptions: QueryObserverOptions<
@@ -38,12 +38,11 @@ export class MobxQuery<
       TData,
       TQueryData,
       TQueryKey
-    >,
+    >
   ) {
     this.#queryClient = queryClient;
     // no need for us to call defaultQueryOptions. creating observer and setOptions will do that for us. important not to call it because it adds _defaulted and _queryKey fields which we DO NOT want to have
     this.#defaultOptions = options;
-    console.log("mobx-query.defaultOptions", this.#defaultOptions);
   }
 
   query(
@@ -53,14 +52,16 @@ export class MobxQuery<
       TData,
       TQueryData,
       TQueryKey
-    >,
-  ) {
+    >
+  ): QueryObserverResult<TData, TError> {
     // pass same options to QueryObserver as for QueryClient
     const opts = Object.assign({}, this.#defaultOptions, options);
 
     // having these fields defined in our options will break the setOptions(..) call as it might early return and not actually run the new query
     if (opts.queryHash || opts._defaulted) {
-      throw new Error("MobxQuery: default and/or options parameter contains invalid fields")
+      throw new Error(
+        "MobxQuery: default and/or options parameter contains invalid fields"
+      );
     }
 
     if (this.#observer) {
@@ -70,18 +71,27 @@ export class MobxQuery<
       // first query() call initializes observer. this triggers the query if it's new/stale
       const observer = (this.#observer = new QueryObserver(
         this.#queryClient,
-        opts,
+        opts
       ));
       runInAction(() => {
-        return Object.assign(this.#reactQueryResult, observer.getCurrentResult())
+        Object.assign(this.#reactQueryResult, observer.getCurrentResult());
       });
       this.#unsubscribe = observer.subscribe((result) => {
-        return runInAction(() => Object.assign(this.#reactQueryResult, result))
+        // if running into "Cannot update a component while rendering a different component"
+        // this can fix it too, but is slower and leads to extra renders
+        // make sure dynamic queries run in the same update as their dependencies instead
+        // for example via mobx autorun(() => query(optionsFromDependency()))
+        // queueMicrotask(() => {
+        //   runInAction(() => {
+        //     Object.assign(this.#reactQueryResult, result);
+        //   });
+        // });
+        runInAction(() => {
+          Object.assign(this.#reactQueryResult, result);
+        });
       });
     }
-  }
 
-  get result(): QueryObserverResult<TData, TError> {
     return this.#reactQueryResult;
   }
 

@@ -1,7 +1,8 @@
-import { makeAutoObservable } from "mobx";
+import { autorun, makeAutoObservable } from "mobx";
 import { RootStore } from "./index";
 import { MobxQuery } from "./mobx-query";
 import { trpc } from "@/query";
+import { MobxMutation } from "./mobx-mutation";
 
 export default class DashboardStore {
   rootStore: RootStore;
@@ -11,39 +12,88 @@ export default class DashboardStore {
     })
   );
   #dashboardQueryResultDynamic;
+  #dashboardMutationResult;
   tableId: string = "1";
 
   constructor(rootStore: RootStore) {
     this.rootStore = rootStore;
 
-    let options = trpc.exampleTableData.getTableData.queryOptions({
-      tableId: "1",
-    });
-    this.#dashboardQueryResultDynamic = new MobxQuery(options);
+    {
+      let options = trpc.exampleTableData.getTableNumber.queryOptions({
+        tableId: "1",
+      });
+      this.#dashboardQueryResultDynamic = new MobxQuery({
+        ...options,
+        retry: 1,
+      });
+    }
+
+    {
+      let options = trpc.exampleTableData.setTableRandom.mutationOptions({
+        onSuccess: (_output, input) => {
+          this.rootStore.queryClient
+            .invalidateQueries({
+              queryKey: trpc.exampleTableData.getTableNumber.queryKey({
+                tableId: input.tableId,
+              }),
+            })
+            .catch((err) => console.error(err));
+        },
+        retry: 1,
+      });
+      this.#dashboardMutationResult = new MobxMutation(options);
+    }
 
     makeAutoObservable(this, undefined, { autoBind: true });
 
-    // fetch data for tableId=1
-    this.#dashboardQueryResult.query();
-    this.#dashboardQueryResultDynamic.query();
+    // trigger dependent query in the same state update, not first in the getter during rendering
+    // otherwise we run into "Cannot update a component while rendering a different component"
+    // as observer.setOptions(newOpt) -> subscriber.notify() -> changes the queryResult
+    // triggering here / in autoRun changes the queryResult and subsequent getter calls to setOptions
+    // will NOT notify the subscriber again as the queryHash is the same
+    autorun(() => {
+      this.#dashboardQueryResultDynamic.query(
+        // need to construct entire new queryOptions (not just update queryKey) as tRPC's queryFn ignores input?
+        trpc.exampleTableData.getTableNumber.queryOptions({
+          tableId: this.tableId,
+        })
+      );
+    });
   }
 
   public async init() {}
 
   public get data() {
-    return this.#dashboardQueryResult.result;
+    return this.#dashboardQueryResult.query();
   }
 
-  public get dataDynamic() {
-    return this.#dashboardQueryResultDynamic.result;
+  public get getTableResult() {
+    return this.#dashboardQueryResultDynamic.query(
+      trpc.exampleTableData.getTableNumber.queryOptions({
+        tableId: this.tableId,
+      })
+    );
+  }
+
+  public get setTableResult() {
+    return this.#dashboardMutationResult;
   }
 
   public incrementTableId() {
     this.tableId = (Number(this.tableId) + 1).toString();
-    return this.#dashboardQueryResultDynamic.query({
-      queryKey: trpc.exampleTableData.getTableData.queryKey({
-        tableId: this.tableId,
-      }),
+  }
+
+  public decrementTableId() {
+    this.tableId = Math.max(1, Number(this.tableId) - 1).toString();
+  }
+
+  public get canDecrementTableId() {
+    return Number(this.tableId) > 1;
+  }
+
+  public async setTableToRandom() {
+    return this.#dashboardMutationResult.mutate({
+      tableId: this.tableId,
     });
   }
 }
