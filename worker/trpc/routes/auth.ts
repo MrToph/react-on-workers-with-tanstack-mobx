@@ -2,7 +2,10 @@ import { z } from "zod";
 import { server } from "@passwordless-id/webauthn";
 import { t } from "@worker/trpc/trpc-instance";
 import { LruCache } from "@worker/db/memory-cache";
+import { createJwtToken } from "../jwt";
 import type { AuthenticationResponseJSON } from "@passwordless-id/webauthn/dist/esm/types";
+import { TRPCError } from "@trpc/server";
+import { createUser, getUserByUsername } from "@worker/db/user";
 
 type RegistrationDataType = Parameters<typeof server.verifyRegistration>[0];
 
@@ -15,14 +18,16 @@ const Z_USERNAME = z.string().min(1).max(32);
 
 const registerCache = new LruCache<AuthCacheRecord>();
 const loginCache = new LruCache<AuthCacheRecord>();
-const USERS: Record<string, { credentials: any[] }> = {};
 
 export const authRouter = t.router({
   registerInit: t.procedure
     .input(z.object({ username: Z_USERNAME }))
     .mutation(async ({ input, ctx }) => {
-      if (USERS[input.username]) {
-        throw new Error("User already exists");
+      if (getUserByUsername(input.username)) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "User already exists",
+        });
       }
 
       const challenge = server.randomChallenge();
@@ -38,14 +43,17 @@ export const authRouter = t.router({
 
   registerVerify: t.procedure
     .input(z.object({ registration: z.any() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const registration = input.registration as RegistrationDataType;
       const username = registration.user.name;
       console.log(`username`, username);
 
       const expected = registerCache.get(username);
       if (!expected) {
-        throw new Error(`no challenge found for user ${username}`);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `no challenge found for user ${username}`,
+        });
       }
 
       const verification = await server.verifyRegistration(
@@ -57,17 +65,21 @@ export const authRouter = t.router({
       registerCache.delete(username);
 
       // create user
-      USERS[username] = { credentials: [verification.credential] };
+      createUser(username, verification.credential);
 
-      // TODO: return JWT auth token
-      return { jwt: "jwt" };
+      const jwt = await createJwtToken({ username }, ctx.env.JWT_SECRET);
+      return { jwt };
     }),
 
   loginInit: t.procedure
     .input(z.object({ username: Z_USERNAME }))
     .mutation(async ({ input, ctx }) => {
-      if (!USERS[input.username]) {
-        throw new Error("User does not exist. Register first.");
+      const user = getUserByUsername(input.username);
+      if (!user) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `User does not exist. Register first.`,
+        });
       }
 
       const challenge = server.randomChallenge();
@@ -78,38 +90,44 @@ export const authRouter = t.router({
         origin: ctx.env.WEBAUTHN_RELYING_PARTY || DEFAULT_ORIGIN,
       });
 
-      return { challenge, credentials: USERS[input.username].credentials };
+      return { challenge, credentials: user.credentials };
     }),
 
   loginVerify: t.procedure
     .input(z.object({ username: Z_USERNAME, authentication: z.any() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const username = input.username;
       const authentication = input.authentication as AuthenticationResponseJSON;
       console.log(`username`, username);
 
       const expected = loginCache.get(username);
-      if (!expected || !USERS[username]) {
-        throw new Error(`no challenge found for user ${username}`);
+      const user = getUserByUsername(username);
+      if (!expected || !user) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `no challenge found for user ${username}`,
+        });
       }
 
-      const credentialUsed = USERS[username].credentials.find(
+      const credentialUsed = user.credentials.find(
         (credential) => credential.id === authentication.id
       );
       if (!credentialUsed) {
-        throw new Error(`credential not found on user ${username}`);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `credential not found on user ${username}`,
+        });
       }
 
-      await server.verifyAuthentication(
-        authentication,
-        credentialUsed,
-        { ...expected, userVerified: false },
-      );
+      await server.verifyAuthentication(authentication, credentialUsed, {
+        ...expected,
+        userVerified: false,
+      });
 
       // free memory, prevent replays
       loginCache.delete(username);
 
-      // TODO: return JWT auth token
-      return { jwt: "jwt" };
+      const jwt = await createJwtToken({ username }, ctx.env.JWT_SECRET);
+      return { jwt };
     }),
 });

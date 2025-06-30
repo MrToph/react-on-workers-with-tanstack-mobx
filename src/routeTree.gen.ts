@@ -11,10 +11,19 @@
 // Import Routes
 
 import { Route as rootRoute } from './routes/__root'
+import { Route as UserImport } from './routes/user'
 import { Route as LoginImport } from './routes/login'
 import { Route as IndexImport } from './routes/index'
+import { Route as UserSettingsImport } from './routes/user.settings'
+import { Route as UserDashboardImport } from './routes/user.dashboard'
 
 // Create/Update Routes
+
+const UserRoute = UserImport.update({
+  id: '/user',
+  path: '/user',
+  getParentRoute: () => rootRoute,
+} as any)
 
 const LoginRoute = LoginImport.update({
   id: '/login',
@@ -26,6 +35,18 @@ const IndexRoute = IndexImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRoute,
+} as any)
+
+const UserSettingsRoute = UserSettingsImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => UserRoute,
+} as any)
+
+const UserDashboardRoute = UserDashboardImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => UserRoute,
 } as any)
 
 // Populate the FileRoutesByPath interface
@@ -46,44 +67,94 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginImport
       parentRoute: typeof rootRoute
     }
+    '/user': {
+      id: '/user'
+      path: '/user'
+      fullPath: '/user'
+      preLoaderRoute: typeof UserImport
+      parentRoute: typeof rootRoute
+    }
+    '/user/dashboard': {
+      id: '/user/dashboard'
+      path: '/dashboard'
+      fullPath: '/user/dashboard'
+      preLoaderRoute: typeof UserDashboardImport
+      parentRoute: typeof UserImport
+    }
+    '/user/settings': {
+      id: '/user/settings'
+      path: '/settings'
+      fullPath: '/user/settings'
+      preLoaderRoute: typeof UserSettingsImport
+      parentRoute: typeof UserImport
+    }
   }
 }
 
 // Create and export the route tree
 
+interface UserRouteChildren {
+  UserDashboardRoute: typeof UserDashboardRoute
+  UserSettingsRoute: typeof UserSettingsRoute
+}
+
+const UserRouteChildren: UserRouteChildren = {
+  UserDashboardRoute: UserDashboardRoute,
+  UserSettingsRoute: UserSettingsRoute,
+}
+
+const UserRouteWithChildren = UserRoute._addFileChildren(UserRouteChildren)
+
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/user': typeof UserRouteWithChildren
+  '/user/dashboard': typeof UserDashboardRoute
+  '/user/settings': typeof UserSettingsRoute
 }
 
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/user': typeof UserRouteWithChildren
+  '/user/dashboard': typeof UserDashboardRoute
+  '/user/settings': typeof UserSettingsRoute
 }
 
 export interface FileRoutesById {
   __root__: typeof rootRoute
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/user': typeof UserRouteWithChildren
+  '/user/dashboard': typeof UserDashboardRoute
+  '/user/settings': typeof UserSettingsRoute
 }
 
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login'
+  fullPaths: '/' | '/login' | '/user' | '/user/dashboard' | '/user/settings'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login'
-  id: '__root__' | '/' | '/login'
+  to: '/' | '/login' | '/user' | '/user/dashboard' | '/user/settings'
+  id:
+    | '__root__'
+    | '/'
+    | '/login'
+    | '/user'
+    | '/user/dashboard'
+    | '/user/settings'
   fileRoutesById: FileRoutesById
 }
 
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   LoginRoute: typeof LoginRoute
+  UserRoute: typeof UserRouteWithChildren
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LoginRoute: LoginRoute,
+  UserRoute: UserRouteWithChildren,
 }
 
 export const routeTree = rootRoute
@@ -97,14 +168,30 @@ export const routeTree = rootRoute
       "filePath": "__root.tsx",
       "children": [
         "/",
-        "/login"
+        "/login",
+        "/user"
       ]
     },
     "/": {
-      "filePath": "index.tsx"
+      "filePath": "index.ts"
     },
     "/login": {
       "filePath": "login.tsx"
+    },
+    "/user": {
+      "filePath": "user.tsx",
+      "children": [
+        "/user/dashboard",
+        "/user/settings"
+      ]
+    },
+    "/user/dashboard": {
+      "filePath": "user.dashboard.tsx",
+      "parent": "/user"
+    },
+    "/user/settings": {
+      "filePath": "user.settings.tsx",
+      "parent": "/user"
     }
   }
 }

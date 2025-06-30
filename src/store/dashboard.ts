@@ -6,13 +6,13 @@ import { MobxMutation } from "./mobx-mutation";
 
 export default class DashboardStore {
   rootStore: RootStore;
-  #dashboardQueryResult = new MobxQuery(
+  #dashboardQuery = new MobxQuery(
     trpc.exampleTableData.getTableData.queryOptions({
       tableId: "exampleTableId",
     })
   );
-  #dashboardQueryResultDynamic;
-  #dashboardMutationResult;
+  #dashboardQueryDynamic;
+  #dashboardMutation;
   tableId: string = "1";
 
   constructor(rootStore: RootStore) {
@@ -22,7 +22,7 @@ export default class DashboardStore {
       let options = trpc.exampleTableData.getTableNumber.queryOptions({
         tableId: "1",
       });
-      this.#dashboardQueryResultDynamic = new MobxQuery({
+      this.#dashboardQueryDynamic = new MobxQuery({
         ...options,
       });
     }
@@ -39,7 +39,7 @@ export default class DashboardStore {
             .catch((err) => console.error(err));
         },
       });
-      this.#dashboardMutationResult = new MobxMutation(options);
+      this.#dashboardMutation = new MobxMutation(options);
     }
 
     makeAutoObservable(this, undefined, { autoBind: true });
@@ -50,7 +50,7 @@ export default class DashboardStore {
     // triggering here / in autoRun changes the queryResult and subsequent getter calls to setOptions
     // will NOT notify the subscriber again as the queryHash is the same
     autorun(() => {
-      this.#dashboardQueryResultDynamic.query(
+      this.#dashboardQueryDynamic.query(
         // need to construct entire new queryOptions (not just update queryKey) as tRPC's queryFn ignores input?
         trpc.exampleTableData.getTableNumber.queryOptions({
           tableId: this.tableId,
@@ -62,11 +62,11 @@ export default class DashboardStore {
   public async init() {}
 
   public get data() {
-    return this.#dashboardQueryResult.query();
+    return this.#dashboardQuery.query();
   }
 
   public get getTableResult() {
-    return this.#dashboardQueryResultDynamic.query(
+    return this.#dashboardQueryDynamic.query(
       trpc.exampleTableData.getTableNumber.queryOptions({
         tableId: this.tableId,
       })
@@ -74,7 +74,7 @@ export default class DashboardStore {
   }
 
   public get setTableResult() {
-    return this.#dashboardMutationResult;
+    return this.#dashboardMutation;
   }
 
   public incrementTableId() {
@@ -90,7 +90,7 @@ export default class DashboardStore {
   }
 
   public async setTableToRandom() {
-    return this.#dashboardMutationResult.mutate({
+    return this.#dashboardMutation.mutate({
       tableId: this.tableId,
     });
   }

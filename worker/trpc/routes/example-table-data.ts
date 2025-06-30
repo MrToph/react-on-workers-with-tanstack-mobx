@@ -1,3 +1,4 @@
+import { TRPCError } from "@trpc/server";
 import { t } from "@worker/trpc/trpc-instance";
 import { z } from "zod";
 
@@ -14,7 +15,10 @@ export const exampleTableDataRouter = t.router({
 
       // 50% chance to throw an error
       // if (Math.random() < 0.5) {
-      //   throw new Error("This is the error thrown from getTableDatabackend");
+      //   throw new TRPCError({
+      //     code: "INTERNAL_SERVER_ERROR",
+      //     message: "This is the error thrown from getTableDatabackend",
+      //   });
       // }
 
       return { dummyData: 3 };
@@ -32,7 +36,10 @@ export const exampleTableDataRouter = t.router({
       }
 
       if (Math.random() < 0.1) {
-        throw new Error("This is the error thrown from getTableNumber backend");
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "This is the error thrown from getTableNumber backend",
+        });
       }
       return { dummyData: obj[input.tableId] };
     }),
@@ -49,7 +56,10 @@ export const exampleTableDataRouter = t.router({
       );
 
       if (Math.random() < 0.5) {
-        throw new Error("This is the error thrown from setTableRandom backend");
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "This is the error thrown from setTableRandom backend",
+        });
       }
       return { dummyData: randomNumber };
     }),

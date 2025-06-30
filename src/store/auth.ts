@@ -1,8 +1,10 @@
 import { makeAutoObservable } from "mobx";
 import { RootStore } from "./index";
-import { trpc } from "@/query";
+import { queryClient, setToken, trpc } from "@/query";
 import { MobxMutation } from "./mobx-mutation";
 import { client } from "@passwordless-id/webauthn";
+import { extendStoreFromLocalStorage } from "./local-storage";
+import { router } from "@/router";
 
 export enum LoginFormState {
   Login,
@@ -19,6 +21,8 @@ export default class AuthStore {
   #registerVerifyMutationResult;
   #loginInitMutationResult;
   #loginVerifyMutationResult;
+
+  jwtToken: string | null = null;
 
   constructor(rootStore: RootStore) {
     this.rootStore = rootStore;
@@ -40,9 +44,18 @@ export default class AuthStore {
     );
 
     makeAutoObservable(this, undefined, { autoBind: true });
+
+    extendStoreFromLocalStorage(this, "authStore", (store) => ({
+      jwtToken: store.jwtToken,
+    }));
   }
 
-  public async init() {}
+  public async init() {
+    // do it in init; need to wait until other stores are constructed
+    if (this.jwtToken) {
+      this.onLogin(this.jwtToken, false);
+    }
+  }
 
   public formToggle() {
     this.loginForm.state =
@@ -115,11 +128,9 @@ export default class AuthStore {
     this.#loginVerifyMutationResult.reset();
 
     const username = this.loginForm.username;
-    let initResult = await this.#loginInitMutationResult.mutateAsync(
-      {
-        username,
-      }
-    );
+    let initResult = await this.#loginInitMutationResult.mutateAsync({
+      username,
+    });
 
     if (!initResult.isSuccess) {
       console.log(`init failed`, initResult.failureCount);
@@ -135,17 +146,18 @@ export default class AuthStore {
     });
     console.log(authentication);
 
-    let verifyResult =
-      await this.#loginVerifyMutationResult.mutateAsync({
-        username,
-        authentication,
-      });
+    let verifyResult = await this.#loginVerifyMutationResult.mutateAsync({
+      username,
+      authentication,
+    });
     if (!verifyResult.isSuccess) {
       console.log(`verify failed`, verifyResult.failureCount);
       // error will be reactively rendered on UI
       return;
     }
     console.log(`verify success`);
+
+    this.onLogin(verifyResult.data!.jwt, true);
   }
 
   public async register() {
@@ -153,11 +165,9 @@ export default class AuthStore {
     this.#registerVerifyMutationResult.reset();
 
     const username = this.loginForm.username;
-    let initResult = await this.#registerInitMutationResult.mutateAsync(
-      {
-        username,
-      }
-    );
+    let initResult = await this.#registerInitMutationResult.mutateAsync({
+      username,
+    });
 
     if (!initResult.isSuccess) {
       // error will be reactively rendered on UI
@@ -170,16 +180,31 @@ export default class AuthStore {
     });
     console.log(registration);
 
-    let verifyResult =
-      await this.#registerVerifyMutationResult.mutateAsync({
-        // username is in registration.user.name
-        registration,
-      });
+    let verifyResult = await this.#registerVerifyMutationResult.mutateAsync({
+      // username is in registration.user.name
+      registration,
+    });
     if (!verifyResult.isSuccess) {
       // error will be reactively rendered on UI
       return;
     }
 
-    // TODO: store JWT token and redirect to dashboard
+    this.onLogin(verifyResult.data!.jwt, true);
+  }
+
+  private async onLogin(jwtToken: string, shouldRedirect = false) {
+    this.jwtToken = jwtToken;
+    setToken(jwtToken);
+    // just invalidate all cached queries. not sure if strictly needed
+    queryClient.invalidateQueries();
+    this.rootStore.onLogin();
+
+    if (shouldRedirect) {
+      router.navigate({ to: "/user/dashboard" });
+    }
+  }
+
+  public get isAuthenticated() {
+    return this.jwtToken !== null;
   }
 }

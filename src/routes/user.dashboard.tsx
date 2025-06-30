@@ -108,6 +108,6 @@ function RouteComponent() {
 
 const ObserverRouteComponent = observer(RouteComponent);
 
-export const Route = createFileRoute("/")({
+export const Route = createFileRoute("/user/dashboard")({
   component: ObserverRouteComponent,
 });
