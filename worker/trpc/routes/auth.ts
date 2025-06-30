@@ -3,11 +3,18 @@ import { server } from "@passwordless-id/webauthn";
 import { t } from "@worker/trpc/trpc-instance";
 import { LruCache } from "@worker/db/memory-cache";
 import { createJwtToken } from "../jwt";
-import type { AuthenticationResponseJSON } from "@passwordless-id/webauthn/dist/esm/types";
+import type {
+  AuthenticationResponseJSON,
+  AuthenticatorInfo,
+  RegistrationInfo,
+  RegistrationJSON,
+} from "@passwordless-id/webauthn/dist/esm/types";
 import { TRPCError } from "@trpc/server";
 import { createUser, getUserByUsername } from "@worker/db/user";
-
-type RegistrationDataType = Parameters<typeof server.verifyRegistration>[0];
+import {
+  parseAuthenticator,
+  toRegistrationInfo,
+} from "@passwordless-id/webauthn/dist/esm/parsers";
 
 type AuthCacheRecord = {
   challenge: string;
@@ -44,9 +51,31 @@ export const authRouter = t.router({
   registerVerify: t.procedure
     .input(z.object({ registration: z.any() }))
     .mutation(async ({ input, ctx }) => {
-      const registration = input.registration as RegistrationDataType;
+      const registration = input.registration as RegistrationJSON;
       const username = registration.user.name;
-      console.log(`username`, username);
+      console.log(
+        `Registering username`,
+        username,
+        JSON.stringify(registration, null, 2)
+      );
+
+      let authenticatorInfo: AuthenticatorInfo | undefined;
+      let authenticatorData = registration.response.authenticatorData;
+      try {
+        // if string is too large, ignore it and don't log it, most likely malicious
+        if (
+          typeof authenticatorData === "string" &&
+          authenticatorData.length < 1024
+        ) {
+          const authData = parseAuthenticator(authenticatorData);
+          const registrationInfo = toRegistrationInfo(registration, authData);
+          authenticatorInfo = registrationInfo.authenticator;
+        }
+      } catch (e) {
+        console.log(
+          `Failed why trying to parse authenticatorData: ${authenticatorData}.\n${e}`
+        );
+      }
 
       const expected = registerCache.get(username);
       if (!expected) {
@@ -65,7 +94,7 @@ export const authRouter = t.router({
       registerCache.delete(username);
 
       // create user
-      createUser(username, verification.credential);
+      createUser(username, verification.credential, authenticatorInfo);
 
       const jwt = await createJwtToken({ username }, ctx.env.JWT_SECRET);
       return { jwt };
@@ -98,7 +127,7 @@ export const authRouter = t.router({
     .mutation(async ({ input, ctx }) => {
       const username = input.username;
       const authentication = input.authentication as AuthenticationResponseJSON;
-      console.log(`username`, username);
+      console.log(`Logging in username`, username);
 
       const expected = loginCache.get(username);
       const user = getUserByUsername(username);

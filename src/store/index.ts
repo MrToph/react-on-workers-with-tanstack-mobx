@@ -31,10 +31,11 @@ export class RootStore {
   // called by authStore upon login
   async onLogin() {
     this.userStore.handleLogin();
+    console.log(`logged in`);
   }
 
   async onLogout() {
-
+    console.log(`logged out`);
   }
 
   public get queryClient() {

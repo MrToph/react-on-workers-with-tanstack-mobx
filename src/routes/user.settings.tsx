@@ -15,7 +15,13 @@ import { useStore } from "@/store/use-store";
 function SettingsComponent() {
   const [userStore] = useStore((store) => [store.userStore]);
 
-  const credentials = userStore.userInfoResult.data?.user.credentials;
+  console.log(
+    userStore.userInfoResult.data,
+    userStore.userInfoResult.data?.user
+  );
+  const { userInfoResult, username } = userStore;
+
+  const credentials = userInfoResult.data?.user.credentials;
 
   return (
     <div className="p-4 md:p-8">
@@ -36,19 +42,30 @@ function SettingsComponent() {
               id="username"
               className="text-lg font-mono bg-gray-100 dark:bg-gray-800 px-3 py-1 rounded-md"
             >
-              {userStore.username}
+              {username}
             </p>
           </div>
           <div className="space-y-2">
             <Label className="text-lg">Passkeys</Label>
             <div className="border rounded-md p-4 space-y-3">
               {credentials && credentials.length > 0 ? (
-                credentials.map((credential: { id: string }) => (
+                credentials.map((credential) => (
                   <div
                     key={credential.id}
                     className="flex items-center justify-between"
                   >
-                    <span>Passkey</span>
+                    <div className="flex items-center gap-4">
+                      {credential.authenticatorInfo?.icon_light && (
+                        <img
+                          src={credential.authenticatorInfo.icon_light}
+                          alt={credential.authenticatorInfo.name}
+                          className="h-8 w-8"
+                        />
+                      )}
+                      <span className="font-medium">
+                        {credential.authenticatorInfo?.name ?? "Passkey"}
+                      </span>
+                    </div>
                     <span className="text-sm text-gray-500 dark:text-gray-400 font-mono">
                       ID: ...{credential.id.slice(-8)}
                     </span>

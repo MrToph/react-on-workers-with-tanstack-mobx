@@ -133,29 +133,24 @@ export default class AuthStore {
     });
 
     if (!initResult.isSuccess) {
-      console.log(`init failed`, initResult.failureCount);
       // error will be reactively rendered on UI
       return;
     }
-    console.log(`init success`, initResult.data!.challenge);
 
     const authentication = await client.authenticate({
       challenge: initResult.data!.challenge,
       allowCredentials: initResult.data!.credentials,
       timeout: 5 * 60_000,
     });
-    console.log(authentication);
 
     let verifyResult = await this.#loginVerifyMutationResult.mutateAsync({
       username,
       authentication,
     });
     if (!verifyResult.isSuccess) {
-      console.log(`verify failed`, verifyResult.failureCount);
       // error will be reactively rendered on UI
       return;
     }
-    console.log(`verify success`);
 
     this.onLogin(verifyResult.data!.jwt, true);
   }
@@ -178,7 +173,6 @@ export default class AuthStore {
       user: username,
       challenge: initResult.data!.challenge,
     });
-    console.log(registration);
 
     let verifyResult = await this.#registerVerifyMutationResult.mutateAsync({
       // username is in registration.user.name
