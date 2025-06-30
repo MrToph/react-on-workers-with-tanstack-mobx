@@ -1,4 +1,3 @@
-import { dummyData } from "@worker/trpc/data/dummy-data";
 import { t } from "@worker/trpc/trpc-instance";
 import { z } from "zod";
 
@@ -18,7 +17,7 @@ export const exampleTableDataRouter = t.router({
       //   throw new Error("This is the error thrown from getTableDatabackend");
       // }
 
-      return { dummyData };
+      return { dummyData: 3 };
     }),
 
   getTableNumber: t.procedure

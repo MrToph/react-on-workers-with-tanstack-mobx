@@ -1,12 +1,14 @@
 import { queryClient } from "@/query";
-import DashboardStore from "./dashboard";
 import type { QueryClient } from "@tanstack/react-query";
+import DashboardStore from "./dashboard";
+import AuthStore from "./auth";
 
 export class RootStore {
   // @ts-ignore
   #queryClient: QueryClient;
 
   dashboardStore = new DashboardStore(this);
+  authStore = new AuthStore(this)
 
   constructor() {
     this.#queryClient = queryClient;

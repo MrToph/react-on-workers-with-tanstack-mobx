@@ -60,11 +60,16 @@ export class MobxMutation<
     );
 
     try {
+      // this runs and runs until it's done. meaning, it will retry internally (if retries defined), only return once it's a final success or error
       await this.#observer.mutate(variables, options);
     } catch (e) {
       // error will be handled in the store/ui
     }
     return this.#reactMutationResult;
+  }
+
+  reset() {
+    this.#observer?.reset();
   }
 
   get data() {

@@ -24,7 +24,6 @@ export default class DashboardStore {
       });
       this.#dashboardQueryResultDynamic = new MobxQuery({
         ...options,
-        retry: 1,
       });
     }
 
@@ -39,7 +38,6 @@ export default class DashboardStore {
             })
             .catch((err) => console.error(err));
         },
-        retry: 1,
       });
       this.#dashboardMutationResult = new MobxMutation(options);
     }

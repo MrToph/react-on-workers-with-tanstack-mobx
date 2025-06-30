@@ -16,6 +16,10 @@ export const queryClient = new QueryClient({
       // Query results that have no more active instances in the QueryObserver are labeled as "inactive" and remain in the cache in case they are used again at a later time.
       gcTime: 5 * 60 * 1000,
     },
+    mutations: {
+      // mutations that error are more common as validations fail. don't want to retry by default
+      retry: 0,
+    },
   },
 });
 
