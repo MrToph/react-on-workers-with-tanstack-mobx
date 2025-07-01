@@ -37,12 +37,12 @@
    * Environment Variables
    * https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
    */
-  "vars": { "WEBAUTHN_RELYING_PARTY": "", "JWT_SECRET": "secret" },
+  "vars": { "WEBAUTHN_RELYING_PARTY": "" },
   "env": {
     "production": {
       "vars": {
+        // secrets like JWT_SECRET are defined in .dev.vars for local dev, and in cloudflare dashboard for production
         "WEBAUTHN_RELYING_PARTY": "https://react.cmichel.dev",
-        "JWT_SECRET": "TODO"
       }
     }
   }
