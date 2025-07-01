@@ -53,7 +53,7 @@ export default class AuthStore {
   public async init() {
     // do it in init; need to wait until other stores are constructed
     if (this.jwtToken) {
-      this.onLogin(this.jwtToken, false);
+      this._onLogin(this.jwtToken, false);
     }
   }
 
@@ -70,9 +70,9 @@ export default class AuthStore {
 
   public async formSubmit() {
     if (this.loginForm.state === LoginFormState.Login) {
-      await this.login();
+      await this._login();
     } else {
-      await this.register();
+      await this._register();
     }
   }
 
@@ -123,7 +123,7 @@ export default class AuthStore {
     );
   }
 
-  public async login() {
+  private async _login() {
     // clear any potential errors from second step
     this.#loginVerifyMutationResult.reset();
 
@@ -152,10 +152,10 @@ export default class AuthStore {
       return;
     }
 
-    this.onLogin(verifyResult.data!.jwt, true);
+    this._onLogin(verifyResult.data!.jwt, true);
   }
 
-  public async register() {
+  private async _register() {
     // clear any potential errors from second step
     this.#registerVerifyMutationResult.reset();
 
@@ -183,10 +183,10 @@ export default class AuthStore {
       return;
     }
 
-    this.onLogin(verifyResult.data!.jwt, true);
+    this._onLogin(verifyResult.data!.jwt, true);
   }
 
-  private async onLogin(jwtToken: string, shouldRedirect = false) {
+  private async _onLogin(jwtToken: string, shouldRedirect = false) {
     this.jwtToken = jwtToken;
     setToken(jwtToken);
     // just invalidate all cached queries. not sure if strictly needed

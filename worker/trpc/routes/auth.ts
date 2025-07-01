@@ -10,11 +10,16 @@ import type {
   RegistrationJSON,
 } from "@passwordless-id/webauthn/dist/esm/types";
 import { TRPCError } from "@trpc/server";
-import { createUser, getUserByUsername } from "@worker/db/user";
+import {
+  addPassKeyToUser,
+  createUser,
+  getUserByUsername,
+} from "@worker/db/user";
 import {
   parseAuthenticator,
   toRegistrationInfo,
 } from "@passwordless-id/webauthn/dist/esm/parsers";
+import { protectedProcedure } from "../procedures";
 
 type AuthCacheRecord = {
   challenge: string;
@@ -59,24 +64,6 @@ export const authRouter = t.router({
         JSON.stringify(registration, null, 2)
       );
 
-      let authenticatorInfo: AuthenticatorInfo | undefined;
-      let authenticatorData = registration.response.authenticatorData;
-      try {
-        // if string is too large, ignore it and don't log it, most likely malicious
-        if (
-          typeof authenticatorData === "string" &&
-          authenticatorData.length < 1024
-        ) {
-          const authData = parseAuthenticator(authenticatorData);
-          const registrationInfo = toRegistrationInfo(registration, authData);
-          authenticatorInfo = registrationInfo.authenticator;
-        }
-      } catch (e) {
-        console.log(
-          `Failed why trying to parse authenticatorData: ${authenticatorData}.\n${e}`
-        );
-      }
-
       const expected = registerCache.get(username);
       if (!expected) {
         throw new TRPCError({
@@ -93,7 +80,8 @@ export const authRouter = t.router({
       // free memory, prevent replays
       registerCache.delete(username);
 
-      // create user
+      const authenticatorInfo =
+        tryGetAuthenticationInfoFromRegistration(registration);
       createUser(username, verification.credential, authenticatorInfo);
 
       const jwt = await createJwtToken({ username }, ctx.env.JWT_SECRET);
@@ -159,4 +147,84 @@ export const authRouter = t.router({
       const jwt = await createJwtToken({ username }, ctx.env.JWT_SECRET);
       return { jwt };
     }),
+
+  // add another passkey to an existing user
+  addInit: protectedProcedure.mutation(async ({ ctx }) => {
+    const challenge = server.randomChallenge();
+
+    // reset any current pending signups. is a DoS vector in theory but can be ignored in practice
+    registerCache.put(ctx.user.username, {
+      challenge,
+      origin: ctx.env.WEBAUTHN_RELYING_PARTY || DEFAULT_ORIGIN,
+    });
+
+    return { challenge, username: ctx.user.username };
+  }),
+
+  addVerify: protectedProcedure
+    .input(z.object({ registration: z.any() }))
+    .mutation(async ({ input, ctx }) => {
+      const registration = input.registration as RegistrationJSON;
+      const username = registration.user.name;
+
+      if (ctx.user.username !== username) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `User ${ctx.user.username} tried to add passkey for ${username}`,
+        });
+      }
+      console.log(
+        `Add secondary passkey for "${ctx.user.username}"`,
+        JSON.stringify(registration, null, 2)
+      );
+
+      const expected = registerCache.get(ctx.user.username);
+      if (!expected) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `no challenge found for user ${ctx.user.username}`,
+        });
+      }
+
+      const verification = await server.verifyRegistration(
+        registration,
+        expected
+      );
+
+      // free memory, prevent replays
+      registerCache.delete(ctx.user.username);
+
+      const authenticatorInfo =
+        tryGetAuthenticationInfoFromRegistration(registration);
+      addPassKeyToUser(
+        ctx.user.username,
+        verification.credential,
+        authenticatorInfo
+      );
+
+      return {};
+    }),
 });
+
+function tryGetAuthenticationInfoFromRegistration(
+  registration: RegistrationJSON
+) {
+  let authenticatorInfo: AuthenticatorInfo | undefined;
+  let authenticatorData = registration.response.authenticatorData;
+  try {
+    // if string is too large, ignore it and don't log it, most likely malicious
+    if (
+      typeof authenticatorData === "string" &&
+      authenticatorData.length < 1024
+    ) {
+      const authData = parseAuthenticator(authenticatorData);
+      const registrationInfo = toRegistrationInfo(registration, authData);
+      authenticatorInfo = registrationInfo.authenticator;
+    }
+  } catch (e) {
+    console.log(
+      `Failed why trying to parse authenticatorData: ${authenticatorData}.\n${e}`
+    );
+  }
+  return authenticatorInfo;
+}

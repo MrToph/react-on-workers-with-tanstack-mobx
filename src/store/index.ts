@@ -3,14 +3,16 @@ import type { QueryClient } from "@tanstack/react-query";
 import DashboardStore from "./dashboard";
 import AuthStore from "./auth";
 import UserStore from "./user";
+import SettingsStore from "./settings";
 
 export class RootStore {
   #queryClient: QueryClient;
 
   // make sure AuthStore runs first, so the JWT is loaded when other stores are initialized
   authStore = new AuthStore(this);
-  dashboardStore = new DashboardStore(this);
   userStore = new UserStore(this);
+  settingsStore = new SettingsStore(this);
+  dashboardStore = new DashboardStore(this);
 
   constructor() {
     this.#queryClient = queryClient;
@@ -20,8 +22,9 @@ export class RootStore {
     try {
       await Promise.allSettled([
         this.authStore.init(),
-        this.dashboardStore.init(),
         this.userStore.init(),
+        this.settingsStore.init(),
+        this.dashboardStore.init(),
       ]);
     } catch (error: any) {
       throw new Error(`Error while initializing store: ${error.message}`);

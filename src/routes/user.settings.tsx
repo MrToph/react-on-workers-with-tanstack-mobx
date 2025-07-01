@@ -13,12 +13,11 @@ import { observer } from "mobx-react-lite";
 import { useStore } from "@/store/use-store";
 
 function SettingsComponent() {
-  const [userStore] = useStore((store) => [store.userStore]);
+  const [userStore, settingsStore] = useStore((store) => [
+    store.userStore,
+    store.settingsStore,
+  ]);
 
-  console.log(
-    userStore.userInfoResult.data,
-    userStore.userInfoResult.data?.user
-  );
   const { userInfoResult, username } = userStore;
 
   const credentials = userInfoResult.data?.user.credentials;
@@ -80,7 +79,22 @@ function SettingsComponent() {
           </div>
         </CardContent>
         <CardFooter>
-          <Button>Add additional passkey</Button>
+          <div className="flex flex-col">
+            <Button
+              onClick={settingsStore.handleAddPasskey}
+              disabled={settingsStore.addPasskeyLoading}
+            >
+              {settingsStore.addPasskeyLoading
+                ? "Adding..."
+                : "Add additional passkey"}
+            </Button>
+            {settingsStore.isAddPasskeyError && (
+              <p className="text-sm text-red-500 mt-2">
+                {settingsStore.addPasskeyError?.message ||
+                  "An unknown error occurred."}
+              </p>
+            )}
+          </div>
         </CardFooter>
       </Card>
     </div>

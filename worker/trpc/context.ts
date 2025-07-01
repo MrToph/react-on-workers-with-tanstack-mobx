@@ -1,4 +1,5 @@
 /// <reference types="../../worker-configuration.d.ts" />
+import { TRPCError } from "@trpc/server";
 import { decodeAndVerifyJwtToken } from "./jwt";
 
 export async function createContext({
@@ -10,21 +11,26 @@ export async function createContext({
   env: Env;
   workerCtx: ExecutionContext;
 }) {
-  // Create your context based on the request object
-  // Will be available as `ctx` in all your resolvers
-  // This is just an example of something you might want to do in your ctx fn
   async function getUserFromHeader() {
-    if (req.headers.get("authorization")) {
-      const user = await decodeAndVerifyJwtToken(
-        req.headers.get("authorization")!.split(" ")[1],
-        env.JWT_SECRET
-      );
-      return user;
+    const authorizationHeader = req.headers.get("authorization");
+    if (!authorizationHeader) {
+      return null;
     }
-    return null;
+
+    const authToken = authorizationHeader.split(" ")[1];
+    if (typeof authToken !== "string") {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "Invalid authorization header. Expected 'Bearer <token>'.",
+      });
+    }
+    const user = await decodeAndVerifyJwtToken(authToken, env.JWT_SECRET);
+    return user;
   }
+
   const user = await getUserFromHeader();
 
+  // available as `ctx` in all resolvers
   return {
     req,
     env,
