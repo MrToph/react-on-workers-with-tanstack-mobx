@@ -1,23 +1,28 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
+import { AppSidebar } from "@/components/app-sidebar";
+import { SiteHeader } from "@/components/site-header";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 
 export const Route = createFileRoute("/user")({
   component: UserLayoutComponent,
   beforeLoad: (ctx) => {
     if (!ctx.context.rootStore.authStore.isAuthenticated) {
       redirect({
-        to: '/login',
+        to: "/login",
         throw: true,
-      })
+      });
     }
   },
 });
 
 function UserLayoutComponent() {
   return (
-    <div>
-      <h1>User Layout</h1>
-      <main>Add sidebar here</main>
-      <Outlet />
-    </div>
+    <SidebarProvider>
+      <AppSidebar variant="inset" />
+      <SidebarInset>
+        <SiteHeader />
+        <Outlet />
+      </SidebarInset>
+    </SidebarProvider>
   );
 }
