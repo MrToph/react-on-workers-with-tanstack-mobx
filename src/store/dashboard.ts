@@ -1,8 +1,8 @@
-import { autorun, makeAutoObservable, reaction } from "mobx";
-import { RootStore } from "./index";
-import { MobxQuery } from "./mobx-query";
 import { trpc } from "@/query";
+import { makeAutoObservable, reaction } from "mobx";
+import { RootStore } from "./index";
 import { MobxMutation } from "./mobx-mutation";
+import { MobxQuery } from "./mobx-query";
 
 export default class DashboardStore {
   rootStore: RootStore;

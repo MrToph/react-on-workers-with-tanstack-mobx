@@ -1,24 +1,23 @@
-import { z } from "zod";
 import { server } from "@passwordless-id/webauthn";
-import { t } from "@worker/trpc/trpc-instance";
-import { LruCache } from "@worker/db/memory-cache";
-import { createJwtToken } from "../jwt";
+import {
+  parseAuthenticator,
+  toRegistrationInfo,
+} from "@passwordless-id/webauthn/dist/esm/parsers";
 import type {
   AuthenticationResponseJSON,
   AuthenticatorInfo,
-  RegistrationInfo,
-  RegistrationJSON,
+  RegistrationJSON
 } from "@passwordless-id/webauthn/dist/esm/types";
 import { TRPCError } from "@trpc/server";
+import { LruCache } from "@worker/db/memory-cache";
 import {
   addPassKeyToUser,
   createUser,
   getUserByUsername,
 } from "@worker/db/user";
-import {
-  parseAuthenticator,
-  toRegistrationInfo,
-} from "@passwordless-id/webauthn/dist/esm/parsers";
+import { t } from "@worker/trpc/trpc-instance";
+import { z } from "zod";
+import { createJwtToken } from "../jwt";
 import { protectedProcedure } from "../procedures";
 
 type AuthCacheRecord = {

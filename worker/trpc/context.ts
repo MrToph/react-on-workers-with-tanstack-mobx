@@ -1,5 +1,4 @@
 /// <reference types="../../worker-configuration.d.ts" />
-import { TRPCError } from "@trpc/server";
 import { decodeAndVerifyJwtToken } from "./jwt";
 
 export async function createContext({
