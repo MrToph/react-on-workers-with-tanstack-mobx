@@ -8,10 +8,10 @@
   "main": "worker/index.ts",
   "compatibility_date": "2025-04-10",
   "assets": {
-    "not_found_handling": "single-page-application",
+    "not_found_handling": "single-page-application"
   },
   "observability": {
-    "enabled": true,
+    "enabled": true
   },
 
   "routes": [
@@ -32,6 +32,16 @@
    * databases, object storage, AI inference, real-time communication and more.
    * https://developers.cloudflare.com/workers/runtime-apis/bindings/
    */
+   // this is our production database. we will not use it in local dev mode (uses sqlite file in .wrangler instead)
+   // however, we need to define it here for dev mode to pick up the type bindings
+   "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "react-on-workers-with-assets",
+      "database_id": "a03f348b-439c-44b7-bcb1-9cba6fca4342",
+      "migrations_dir": "./.drizzle-out"
+    }
+  ],
 
   /**
    * Environment Variables
@@ -42,8 +52,17 @@
     "production": {
       "vars": {
         // secrets like JWT_SECRET are defined in .dev.vars for local dev, and in cloudflare dashboard for production
-        "WEBAUTHN_RELYING_PARTY": "https://react.cmichel.dev",
-      }
+        "WEBAUTHN_RELYING_PARTY": "https://react.cmichel.dev"
+      },
+      // we need to define it here again because environemnts are isolated and don't inherit the d1_databases above
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "react-on-workers-with-assets",
+          "database_id": "a03f348b-439c-44b7-bcb1-9cba6fca4342",
+          "migrations_dir": "./.drizzle-out"
+        }
+      ],
     }
   }
   /**

@@ -1,0 +1,2 @@
+# for production, need to define these secrets in the dashboard
+JWT_SECRET="<openssl rand -base64 64>"

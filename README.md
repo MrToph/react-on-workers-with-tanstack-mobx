@@ -1,8 +1,9 @@
-# React App on Cloudflare Workers with TanStack & tRPC
+# React App on Cloudflare Workers with TanStack & MobX & tRPC & webauthn & drizzle SQL
 
 This project demonstrates a full-stack React application deployed entirely on the Cloudflare edge network, utilizing Cloudflare Workers for the server-side logic and Cloudflare Workers with (Assets) for hosting the static frontend assets.
 
-It leverages the power of the TanStack ecosystem (Query for data fetching/caching, Router for type-safe routing) and tRPC for end-to-end typesafe APIs between the React frontend and the Cloudflare Worker backend.
+It leverages the power of the TanStack ecosystem (Query for data fetching/caching, Router for type-safe routing), separates logic and view via MobX, uses tRPC for end-to-end typesafe APIs between the React frontend and the Cloudflare Worker backend.
+It hosts an example Webauthn user signup/login flow using Cloudflare's D1 SQL database via drizzle.
 
 ## ✨ Features
 
@@ -11,17 +12,11 @@ It leverages the power of the TanStack ecosystem (Query for data fetching/cachin
 *   **Cloudflare Pages (Assets) Deployment:** Static assets hosted globally on Cloudflare's edge network.
 *   **TanStack Router:** Type-safe routing within the React application.
 *   **TanStack Query:** Efficient data fetching, caching, and state management.
+*   **MobX:** State management for the React application.
 *   **tRPC:** End-to-end typesafe APIs, eliminating the need for manual API contract maintenance.
+*   **Webauthn:** User registration and login via passkeys. No email or passwords needed. Supports adding multiple passkeys to the same user account via the Settings page.
+*   **D1:** Cloudflare's SQL database.
 *   **Edge Deployment:** Low latency and high availability thanks to Cloudflare's global network.
-
-## 🛠️ Tech Stack
-
-*   **Frontend:** React, TypeScript, Vite (or Create React App/Next.js configured for static export)
-*   **Routing:** TanStack Router
-*   **Data Fetching:** TanStack Query
-*   **API:** tRPC
-*   **Backend:** Cloudflare Workers, Hono (optional, but common for Workers routing)
-*   **Deployment:** Cloudflare Pages (Workers integration), Wrangler CLI
 
 ## 🚀 Getting Started
 
@@ -36,25 +31,19 @@ It leverages the power of the TanStack ecosystem (Query for data fetching/cachin
 
 
 **Install dependencies:**
-    (Depending on your setup, you might have a monorepo structure with `packages/client` and `packages/worker`, or a single project. Adjust accordingly.)
+
 ```bash
-npm install
-# or
-yarn install
-# or
 pnpm install
 ```
 
 ### Development
 
-1.  **Start the development server:**
-    Typically, you'll run the frontend dev server and the Wrangler dev server concurrently. You might use a tool like `concurrently` or run them in separate terminals.
-
-    *   **Frontend with Backend Worker (Vite example):**
-        ```bash
-        # In the client directory or project root
-        npm run dev
-        ```
+1. Copy `.dev.vars.example` to `.dev.vars`. Edit the values.
+2.  **Start the development server:**
+    ```bash
+    # In the client directory or project root
+    pnpm run dev
+    ```
 
 
     Your frontend will likely run on `http://localhost:5173` (Vite default) and the worker dev server on `http://localhost:8787`. Configure your frontend tRPC client to point to the worker's dev URL.
@@ -64,7 +53,7 @@ pnpm install
 1.  **Build the frontend:**
     ```bash
     # In the client directory or project root
-    npm run build
+    pnpm run build
     ```
     This will typically generate a `dist` directory with static assets.
 
@@ -72,21 +61,23 @@ pnpm install
 
 ## ☁️ Deployment to Cloudflare
 
-This project uses Cloudflare Worker as a compute platform
+This project uses Cloudflare Worker as a compute platform.
+Requires login via wrangler to deploy to Cloudflare Workers.
+Correct bindings for the "Pages" and "D1" database need to be set up in the Cloudflare Dashboard.
 
+**Deploy to Cloudflare:**
+```bash
+pnpm run deploy
 ```
-npm run deploy
-```
 
+**Add secret environment vars**
 
+Add secrets via the Cloudflare "Pages" Dashboard. (Make sure to set the type to "Secret" not "Plaintext".)
 
-## 🔧 Key Concepts
+**Database Schema**
 
-*   **tRPC Server (Worker):** The Cloudflare Worker hosts the tRPC router. It defines procedures (queries and mutations) that the frontend can call.
-*   **tRPC Client (React App):** The React app uses the tRPC client, configured with the URL of the deployed Worker (or the dev server URL during development). It provides type-safe hooks (`api.post.list.useQuery()`) generated from the backend router definition.
-*   **TanStack Query Integration:** The tRPC client integrates seamlessly with TanStack Query for caching, request deduplication, background refetching, etc.
-*   **TanStack Router:** Manages client-side navigation and state, providing type-safety for route definitions and parameters. It works well with TanStack Query for data fetching tied to specific routes.
-*   **Cloudflare Pages (Assets):** Serves the static HTML, CSS, and JavaScript generated by the React build process. Requests to paths not matching static assets can be configured to fall back to the Worker (`_worker.js`).
-*   **Cloudflare Workers:** Executes the server-side tRPC logic. Handles API requests from the frontend.
+The database is managed using a code-first approach by the `worker/drizzle/schemas.ts` file.
+Changes to the database schema are performed in this file first and the corresponding migration SQL statements created via `pnpm run drizzle:generate`.
 
-This setup provides a robust, type-safe, and performant full-stack application running entirely on the Cloudflare edge.
+1. For local development, `wrangler` can simulate the remote Cloudflare D1 database with a local sqlite file that persists (in `.wrangler/`). The migration is applied by running `pnpm run drizzle:migrate:local`.
+2. To migrate the remote Cloudflare D1 database instead, run `pnpm run drizzle:migrate:prod`.

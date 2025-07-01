@@ -1,20 +1,55 @@
-import type { AuthenticatorInfo, CredentialInfo } from "@passwordless-id/webauthn/dist/esm/types";
+import type {
+  AuthenticatorInfo,
+  CredentialInfo,
+} from "@passwordless-id/webauthn/dist/esm/types";
+import type { DB } from "./db.types";
+import { users } from "./schemas";
+import { eq } from "drizzle-orm";
 
-type Credential = CredentialInfo & { authenticatorInfo?: AuthenticatorInfo };
-const USERS: Record<string, { username: string; credentials: Credential[] }> = {};
+export type UserCredential = CredentialInfo & {
+  authenticatorInfo?: AuthenticatorInfo;
+};
 
-export function getUserByUsername(username: string) {
-  return USERS[username];
+export async function getUserByUsername(db: DB, username: string) {
+  return db.select().from(users).where(eq(users.username, username)).get();
 }
 
-export function createUser(username: string, initialCredential: CredentialInfo, authenticatorInfo?: AuthenticatorInfo) {
-  USERS[username] = { username, credentials: [{ ...initialCredential, authenticatorInfo }] };
+export async function createUser(
+  db: DB,
+  username: string,
+  initialCredential: CredentialInfo,
+  authenticatorInfo?: AuthenticatorInfo
+) {
+  const credential = { ...initialCredential, authenticatorInfo };
+
+  await db
+    .insert(users)
+    .values({
+      username,
+      credentials: [credential],
+    })
+    .run();
 }
 
-export function addPassKeyToUser(username: string, credential: CredentialInfo, authenticatorInfo?: AuthenticatorInfo) {
-  const user = USERS[username];
+export async function addPassKeyToUser(
+  db: DB,
+  username: string,
+  credential: CredentialInfo,
+  authenticatorInfo?: AuthenticatorInfo
+) {
+  const user = await db
+    .select()
+    .from(users)
+    .where(eq(users.username, username))
+    .get();
   if (!user) {
     throw new Error(`User ${username} not found`);
   }
-  user.credentials.push({ ...credential, authenticatorInfo });
+  await db
+    .update(users)
+    .set({
+      credentials: [...user.credentials, { ...credential, authenticatorInfo }],
+    })
+    .where(eq(users.username, username))
+    .run();
 }

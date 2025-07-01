@@ -6,7 +6,7 @@ import {
 import type {
   AuthenticationResponseJSON,
   AuthenticatorInfo,
-  RegistrationJSON
+  RegistrationJSON,
 } from "@passwordless-id/webauthn/dist/esm/types";
 import { TRPCError } from "@trpc/server";
 import { LruCache } from "@worker/db/memory-cache";
@@ -34,7 +34,7 @@ export const authRouter = t.router({
   registerInit: t.procedure
     .input(z.object({ username: Z_USERNAME }))
     .mutation(async ({ input, ctx }) => {
-      if (getUserByUsername(input.username)) {
+      if (await getUserByUsername(ctx.db, input.username)) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "User already exists",
@@ -81,7 +81,12 @@ export const authRouter = t.router({
 
       const authenticatorInfo =
         tryGetAuthenticationInfoFromRegistration(registration);
-      createUser(username, verification.credential, authenticatorInfo);
+      await createUser(
+        ctx.db,
+        username,
+        verification.credential,
+        authenticatorInfo
+      );
 
       const jwt = await createJwtToken({ username }, ctx.env.JWT_SECRET);
       return { jwt };
@@ -90,7 +95,7 @@ export const authRouter = t.router({
   loginInit: t.procedure
     .input(z.object({ username: Z_USERNAME }))
     .mutation(async ({ input, ctx }) => {
-      const user = getUserByUsername(input.username);
+      const user = await getUserByUsername(ctx.db, input.username);
       if (!user) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
@@ -117,7 +122,7 @@ export const authRouter = t.router({
       console.log(`Logging in username`, username);
 
       const expected = loginCache.get(username);
-      const user = getUserByUsername(username);
+      const user = await getUserByUsername(ctx.db, username);
       if (!expected || !user) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
@@ -195,7 +200,8 @@ export const authRouter = t.router({
 
       const authenticatorInfo =
         tryGetAuthenticationInfoFromRegistration(registration);
-      addPassKeyToUser(
+      await addPassKeyToUser(
+        ctx.db,
         ctx.user.username,
         verification.credential,
         authenticatorInfo

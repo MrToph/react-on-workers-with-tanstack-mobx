@@ -1,5 +1,7 @@
 /// <reference types="../../worker-configuration.d.ts" />
 import { decodeAndVerifyJwtToken } from "./jwt";
+import { drizzle } from 'drizzle-orm/d1';
+import * as schema from '@worker/db/schemas';
 
 export async function createContext({
   req,
@@ -28,6 +30,7 @@ export async function createContext({
   }
 
   const user = await getUserFromHeader();
+  const db = drizzle(env.DB, { schema });
 
   // available as `ctx` in all resolvers
   return {
@@ -35,6 +38,7 @@ export async function createContext({
     env,
     workerCtx,
     user,
+    db,
   };
 }
 

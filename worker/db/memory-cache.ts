@@ -17,7 +17,6 @@ export class LruCache<T> {
   }
 
   public put(key: string, value: T) {
-
     if (this.values.size >= this.maxEntries) {
       // least-recently used cache eviction strategy
       const keyToDelete = this.values.keys().next().value!;

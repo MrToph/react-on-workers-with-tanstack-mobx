@@ -4,13 +4,17 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "prebuild": "npx wrangler types",
+    "dev": "vite dev",
+    "prebuild": "pnpm run cf-typegen",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "pnpm run build && vite preview",
     "deploy": "pnpm run build && wrangler deploy",
-    "cf-typegen": "wrangler types"
+    "cf-typegen": "wrangler types",
+    "drizzle:studio:prod": "drizzle-kit studio",
+    "drizzle:generate": "drizzle-kit generate",
+    "drizzle:migrate:local": "pnpm wrangler d1 migrations apply react-on-workers-with-assets --local",
+    "drizzle:migrate:prod": "pnpm wrangler d1 migrations apply react-on-workers-with-assets --remote --env production"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -40,6 +44,8 @@
     "@trpc/tanstack-react-query": "^11.1.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "drizzle-kit": "^0.31.4",
+    "drizzle-orm": "^0.44.2",
     "hono": "^4.7.6",
     "lucide-react": "^0.487.0",
     "mobx": "^6.13.7",
