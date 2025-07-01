@@ -1,4 +1,4 @@
-import { makeAutoObservable } from "mobx";
+import { makeAutoObservable, runInAction } from "mobx";
 import { RootStore } from "./index";
 import { queryClient, setToken, trpc } from "@/query";
 import { MobxMutation } from "./mobx-mutation";
@@ -121,6 +121,20 @@ export default class AuthStore {
       this.#registerInitMutationResult.isPending ||
       this.#registerVerifyMutationResult.isPending
     );
+  }
+
+  public async handleLogout() {
+    await router.navigate({ to: "/login" });
+    // Any steps after await aren't in the same tick, so they require action wrapping
+    runInAction(() => {
+      this.jwtToken = null;
+      setToken("");
+      // mark all queries as stale, but do not refetch them
+      queryClient.invalidateQueries({
+        refetchType: "none",
+      });
+      this.rootStore.onLogout();
+    });
   }
 
   private async _login() {

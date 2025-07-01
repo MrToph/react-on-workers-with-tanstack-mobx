@@ -19,10 +19,10 @@ export async function createContext({
 
     const authToken = authorizationHeader.split(" ")[1];
     if (typeof authToken !== "string") {
-      throw new TRPCError({
-        code: "BAD_REQUEST",
-        message: "Invalid authorization header. Expected 'Bearer <token>'.",
-      });
+      // if invalid auth token provided, just act as no user instead of throwing error
+      // as we still want to access unprotected routes like /login to override the invalid auth token
+      // if it is set for some reason by client
+      return null;
     }
     const user = await decodeAndVerifyJwtToken(authToken, env.JWT_SECRET);
     return user;

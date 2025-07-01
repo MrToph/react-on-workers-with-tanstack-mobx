@@ -1,4 +1,4 @@
-import { autorun, makeAutoObservable } from "mobx";
+import { autorun, makeAutoObservable, reaction } from "mobx";
 import { RootStore } from "./index";
 import { MobxQuery } from "./mobx-query";
 import { trpc } from "@/query";
@@ -49,14 +49,18 @@ export default class DashboardStore {
     // as observer.setOptions(newOpt) -> subscriber.notify() -> changes the queryResult
     // triggering here / in autoRun changes the queryResult and subsequent getter calls to setOptions
     // will NOT notify the subscriber again as the queryHash is the same
-    autorun(() => {
-      this.#dashboardQueryDynamic.query(
-        // need to construct entire new queryOptions (not just update queryKey) as tRPC's queryFn ignores input?
-        trpc.exampleTableData.getTableNumber.queryOptions({
-          tableId: this.tableId,
-        })
-      );
-    });
+    reaction(
+      () => this.tableId,
+      (tableId) => {
+        this.#dashboardQueryDynamic.query(
+          // need to construct entire new queryOptions (not just update queryKey) as tRPC's queryFn ignores input?
+          trpc.exampleTableData.getTableNumber.queryOptions({
+            tableId,
+          })
+        );
+      },
+      { fireImmediately: false }
+    );
   }
 
   public async init() {}
