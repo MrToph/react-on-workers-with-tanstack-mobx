@@ -1,2 +1,3 @@
-# for production, need to define these secrets in the dashboard
+# this file only manages local dev env
+# need to define these secrets in the dashboard for production
 JWT_SECRET="<openssl rand -base64 64>"
